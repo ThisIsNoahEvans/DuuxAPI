@@ -33,3 +33,11 @@ type SensorResponse struct {
 	Type string `json:"type"`
 	DisplayName string `json:"displayName"`
 }
+
+// General success response
+type SuccessResponse struct {
+	Response struct {
+		Success bool `json:"success"`
+		Message string `json:"message"`
+	} `json:"response"`
+}

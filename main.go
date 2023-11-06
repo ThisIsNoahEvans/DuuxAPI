@@ -245,13 +245,16 @@ func getAuthToken(loginCode string) {
 		fmt.Println("Successfully got auth token!")
 		saveAPIKey(authTokenResponse.AccessToken, "access_token")
 		saveAPIKey(authTokenResponse.RefreshToken, "refresh_token")
+
+		// get the user data
+		getUserData()
 	} else {
 		fmt.Println("Failed!")
 		fmt.Println("Message: " + authTokenResponse.AccessToken)
 	}
 }
 
-func getUser() {
+func getUserData() {
 	fmt.Println("Getting user...")
 
 	url := "https://v4.api.cloudgarden.nl/users/current"
@@ -301,6 +304,31 @@ func getUser() {
 	fmt.Println("Successfully got user!")
 }
 
+// get the user data from the file
+func getUserDataFromFile() UserResponseSubset {
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+		return UserResponseSubset{}
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-user.json")
+
+	// read the file
+	jsonData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return UserResponseSubset{}
+	}
+
+	userResponse := UserResponseSubset{}
+	json.Unmarshal(jsonData, &userResponse)
+
+	return userResponse
+}
+
 // devices are called "sensors" in the API
 func getSensors() []SensorResponse {
 	url := "https://v4.api.cloudgarden.nl/tenants/31897/sensors"
@@ -334,7 +362,7 @@ func getSensors() []SensorResponse {
 		fmt.Println(err)
 		return nil
 	}
-	
+
 	// check if there is content in the body
 	if len(body) == 0 {
 		fmt.Println("Failed!")
@@ -345,7 +373,7 @@ func getSensors() []SensorResponse {
 	sensorResponse := []SensorResponse{}
 	json.Unmarshal(body, &sensorResponse)
 
-		// print the sensors with tabwriter
+	// print the sensors with tabwriter
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.Debug)
 	fmt.Fprintln(w, "\nID\tType\tDisplay Name")
 	for _, sensor := range sensorResponse {
@@ -393,19 +421,102 @@ func logout() {
 	fmt.Println("Successfully logged out!")
 }
 
+func setPower(fanID string, power string) {
+	fmt.Println("Setting power...")
+
+	// get the tenant from the user data
+	userData := getUserDataFromFile()
+	// get the first tenant that isn't id '44' (this is duux default)
+	var tenantID int
+	for _, tenant := range userData.User.Tenants {
+		if tenant.ID != 44 {
+			tenantID = tenant.ID
+			break
+		}
+	}
+
+	// check if tenantID is still 0
+	if tenantID == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Tenant ID is 0")
+		return
+	}
+
+	url := "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors/" + fanID + "/command"
+	method := "POST"
+
+	if power == "on" {
+		power = "01"
+	} else if power == "off" {
+		power = "00"
+	} else {
+		fmt.Println("Invalid power state: " + power)
+		return
+	}
+
+	formData := "command=tune+set+power+" + power
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, strings.NewReader(formData))
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	// if success = true
+	successResponse := SuccessResponse{}
+	json.Unmarshal(body, &successResponse)
+
+	if successResponse.Response.Success {
+		fmt.Println("Successfully set power!")
+	} else {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+	}
+
+}
 
 func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  login")
 	fmt.Println("  logout")
 	fmt.Println("  getfans")
-	fmt.Println("  setpower <fan> <on/off>")
-	fmt.Println("  setspeed <fan> <speed, 1-26>")
-	fmt.Println("  setmode <fan> <normal|natural|sleep>")
-	fmt.Println("  settimer <fan> <on/off> <hours> <minutes>")
-	fmt.Println("  setoscillation <fan> <vertical|horizontal> <on/off>")
+	fmt.Println("  setpower <fan id> <on/off>")
+	fmt.Println("  setspeed <fan id> <speed, 1-26>")
+	fmt.Println("  setmode <fan id> <normal/natural/sleep>")
+	fmt.Println("  settimer <fan id> <on/off> <hours> <minutes>")
+	fmt.Println("  setoscillation <fan id> <vertical/horizontal> <on/off>")
 }
-
 
 func main() {
 	args := os.Args[1:]
@@ -419,7 +530,14 @@ func main() {
 		case "getfans":
 			getSensors()
 		case "setpower":
-			fmt.Println("Setting power...")
+			if len(args) < 3 {
+				fmt.Println("Not enough arguments")
+				printUsage()
+				return
+			}
+			fanID := args[1]
+			power := args[2]
+			setPower(fanID, power)
 		case "setspeed":
 			fmt.Println("Setting speed...")
 		case "setmode":
@@ -438,5 +556,5 @@ func main() {
 		printUsage()
 		return
 	}
-	
+
 }
