@@ -26,3 +26,10 @@ type UserResponseSubset struct {
         } `json:"tenants"`
     } `json:"user"`
 }
+
+// Struct for SensorResponse
+type SensorResponse struct {
+	ID int `json:"id"`
+	Type string `json:"type"`
+	DisplayName string `json:"displayName"`
+}

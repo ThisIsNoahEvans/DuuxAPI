@@ -298,9 +298,56 @@ func getUser() {
 	saveUserData(userResponse)
 
 	fmt.Println("Successfully got user!")
+}
 
+// devices are called "sensors" in the API
+func getSensors() {
+	url := "https://v4.api.cloudgarden.nl/tenants/31897/sensors"
+	method := "GET"
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	sensorResponse := []SensorResponse{}
+	json.Unmarshal(body, &sensorResponse)
+
+	fmt.Println("Successfully got sensors!")
+	fmt.Println(sensorResponse)
+	
 }
 func main() {
-	sendLoginCode()
-	getUser()
+	getSensors()
 }
