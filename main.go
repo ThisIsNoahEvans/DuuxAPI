@@ -508,8 +508,12 @@ func setPower(fanID string, power string) {
 func setSpeed(fanID string, speed string) {
 	fmt.Println("Setting speed...")
 
+	// convert speed to int
+	speedInt := 0
+	fmt.Sscanf(speed, "%d", &speedInt)
+
 	// check if speed is between 1 and 26
-	if speed < "1" || speed > "26" {
+	if speedInt < 1 || speedInt > 26 {
 		fmt.Println("Invalid speed: " + speed)
 		return
 	}
