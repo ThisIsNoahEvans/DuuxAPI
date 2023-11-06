@@ -503,6 +503,87 @@ func setPower(fanID string, power string) {
 		fmt.Println("Failed!")
 		fmt.Println("Body: " + string(body))
 	}
+}
+
+func setSpeed(fanID string, speed string) {
+	fmt.Println("Setting speed...")
+
+	// check if speed is between 1 and 26
+	if speed < "1" || speed > "26" {
+		fmt.Println("Invalid speed: " + speed)
+		return
+	}
+
+	// get the tenant from the user data
+	userData := getUserDataFromFile()
+	// get the first tenant that isn't id '44' (this is duux default)
+	var tenantID int
+	for _, tenant := range userData.User.Tenants {
+		if tenant.ID != 44 {
+			tenantID = tenant.ID
+			break
+		}
+	}
+
+	// check if tenantID is still 0
+	if tenantID == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Tenant ID is 0")
+		return
+	}
+
+	url := "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors/" + fanID + "/command"
+	method := "POST"
+
+	formData := "command=tune+set+speed+" + speed
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, strings.NewReader(formData))
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	// if success = true
+	successResponse := SuccessResponse{}
+	json.Unmarshal(body, &successResponse)
+
+	if successResponse.Response.Success {
+		fmt.Println("Successfully set speed!")
+	} else {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+	}
 
 }
 
@@ -539,7 +620,14 @@ func main() {
 			power := args[2]
 			setPower(fanID, power)
 		case "setspeed":
-			fmt.Println("Setting speed...")
+			if len(args) < 3 {
+				fmt.Println("Not enough arguments")
+				printUsage()
+				return
+			}
+			fanID := args[1]
+			speed := args[2]
+			setSpeed(fanID, speed)
 		case "setmode":
 			fmt.Println("Setting mode...")
 		case "settimer":
