@@ -675,6 +675,92 @@ func setMode(fanID string, mode string) {
 	}
 }
 
+func setTimer(fanID string, hours string) {
+	fmt.Println("Setting timer...")
+
+	// get the tenant from the user data
+	userData := getUserDataFromFile()
+	// get the first tenant that isn't id '44' (this is duux default)
+	var tenantID int
+	for _, tenant := range userData.User.Tenants {
+		if tenant.ID != 44 {
+			tenantID = tenant.ID
+			break
+		}
+	}
+
+	// check if tenantID is still 0
+	if tenantID == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Tenant ID is 0")
+		return
+	}
+
+	// between 1 and 12 hours
+	hoursInt := 0
+	fmt.Sscanf(hours, "%d", &hoursInt)
+	if hoursInt < 1 || hoursInt > 12 {
+		fmt.Println("Invalid hours: " + hours)
+		return
+	}
+
+	// turn fan on first
+	setPower(fanID, "on")
+
+	url := "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors/" + fanID + "/command"
+	method := "POST"
+
+	formData := "command=tune+set+timer+" + hours
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, strings.NewReader(formData))
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	// if success = true
+	successResponse := SuccessResponse{}
+	json.Unmarshal(body, &successResponse)
+
+	if successResponse.Response.Success {
+		fmt.Println("Successfully set timer!")
+	} else {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+	}
+}
+
 func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  login")
@@ -683,7 +769,7 @@ func printUsage() {
 	fmt.Println("  setpower <fan id> <on/off>")
 	fmt.Println("  setspeed <fan id> <speed, 1-26>")
 	fmt.Println("  setmode <fan id> <normal/natural/night>")
-	fmt.Println("  settimer <fan id> <on/off> <hours> <minutes>")
+	fmt.Println("  settimer <fan id> <hours>")
 	fmt.Println("  setoscillation <fan id> <vertical/horizontal> <on/off>")
 }
 
@@ -726,7 +812,14 @@ func main() {
 			mode := args[2]
 			setMode(fanID, mode)
 		case "settimer":
-			fmt.Println("Setting timer...")
+			if len(args) < 3 {
+				fmt.Println("Not enough arguments")
+				printUsage()
+				return
+			}
+			fanID := args[1]
+			hours := args[2]
+			setTimer(fanID, hours)
 		case "setoscillation":
 			fmt.Println("Setting oscillation...")
 		default:
