@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lnquy/cron"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -930,7 +931,23 @@ func getSchedule(fanID string) {
 		fmt.Println("Schedules:")
 		for _, schedule := range sensor.SensorSchedules {
 			fmt.Printf("\tSchedule ID: %d\n", schedule.ID)
-			fmt.Printf("\tCron: %s\n", schedule.Cron)
+
+			exprDesc, err := cron.NewDescriptor(
+				cron.Use24HourTimeFormat(true),
+				cron.DayOfWeekStartsAtOne(false),
+				cron.Verbose(false),
+				cron.SetLocales(cron.Locale_en),
+			)
+			if err != nil {
+				fmt.Println("failed to create CRON expression descriptor: %s", err)
+			}
+		
+			desc, err := exprDesc.ToDescription(schedule.Cron, cron.Locale_en)
+			if err != nil {
+				fmt.Println("failed to convert CRON expression to human readable description: %s", err)
+			}
+
+			fmt.Printf("\tCron: %s\n", desc)
 			fmt.Printf("\tPower: %d\n", schedule.Value.Power)
 			// Check if Mode and Speed are not nil before printing
 			if schedule.Value.Mode != nil {
