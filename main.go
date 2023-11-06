@@ -939,12 +939,12 @@ func getSchedule(fanID string) {
 				cron.SetLocales(cron.Locale_en),
 			)
 			if err != nil {
-				fmt.Println("failed to create CRON expression descriptor: %s", err)
+				fmt.Printf("failed to create CRON expression descriptor: %s", err)
 			}
 		
 			desc, err := exprDesc.ToDescription(schedule.Cron, cron.Locale_en)
 			if err != nil {
-				fmt.Println("failed to convert CRON expression to human readable description: %s", err)
+				fmt.Printf("failed to convert CRON expression to human readable description: %s", err)
 			}
 
 			fmt.Printf("\tCron: %s\n", desc)
