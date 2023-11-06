@@ -13,3 +13,16 @@ type AuthTokenResponse struct {
 	ExpiresIn int `json:"expires_in"`
 	TokenType string `json:"token_type"`
 }
+
+// Struct for UserResponse
+type UserResponseSubset struct {
+    User struct {
+        ID        int    `json:"id"`
+        Username string `json:"username"`
+        Email    string `json:"email"`
+        Tenants []struct {
+            ID int `json:"id"`
+            Name string `json:"name"`
+        } `json:"tenants"`
+    } `json:"user"`
+}

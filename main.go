@@ -6,11 +6,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,6 +28,15 @@ func init() {
 }
 
 func saveAPIKey(apiKey string, name string) error {
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-"+name+".enc")
+
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
 		return err
@@ -42,8 +53,7 @@ func saveAPIKey(apiKey string, name string) error {
 
 	encodedStr := base64.StdEncoding.EncodeToString(ciphertext)
 
-	fileName := name + ".enc"
-	err = ioutil.WriteFile(fileName, []byte(encodedStr), 0644)
+	err = ioutil.WriteFile(filePath, []byte(encodedStr), 0644)
 	if err != nil {
 		return err
 	}
@@ -53,8 +63,16 @@ func saveAPIKey(apiKey string, name string) error {
 }
 
 func getAPIKey(name string) (string, error) {
-	fileName := name + ".enc"
-	encodedStr, err := ioutil.ReadFile(fileName)
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-"+name+".enc")
+
+	encodedStr, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		// the file doesn't exist
 		return "", errors.New("API key file not found")
@@ -80,6 +98,32 @@ func getAPIKey(name string) (string, error) {
 	stream.XORKeyStream(ciphertext, ciphertext)
 
 	return string(ciphertext), nil
+}
+
+func saveUserData(userData UserResponseSubset) error {
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-user.json")
+
+	// Marshal the userData into JSON
+	jsonData, err := json.MarshalIndent(userData, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// Write the JSON data to the file
+	err = os.WriteFile(filePath, jsonData, 0644)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("User data saved to %s\n", filePath)
+	return nil
 }
 
 func sendLoginCode() {
@@ -204,9 +248,59 @@ func getAuthToken(loginCode string) {
 		fmt.Println("Failed!")
 		fmt.Println("Message: " + authTokenResponse.AccessToken)
 	}
-
 }
 
+func getUser() {
+	fmt.Println("Getting user...")
+
+	url := "https://v4.api.cloudgarden.nl/users/current"
+	method := "GET"
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	userResponse := UserResponseSubset{}
+	json.Unmarshal(body, &userResponse)
+
+	// save the user data to a file
+	saveUserData(userResponse)
+
+	fmt.Println("Successfully got user!")
+
+}
 func main() {
 	sendLoginCode()
+	getUser()
 }
