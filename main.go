@@ -356,6 +356,44 @@ func getSensors() []SensorResponse {
 	return sensorResponse
 }
 
+func logout() {
+	fmt.Println("Logging out...")
+
+	// delete the API key files
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Access token
+	filePath := filepath.Join(homeDir, ".duux-access_token.enc")
+	err = os.Remove(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Refresh token
+	filePath = filepath.Join(homeDir, ".duux-refresh_token.enc")
+	err = os.Remove(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// User data
+	filePath = filepath.Join(homeDir, ".duux-user.json")
+	err = os.Remove(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Successfully logged out!")
+}
+
+
 func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  login")
@@ -375,10 +413,10 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "login":
-			fmt.Println("Logging in...")
 			sendLoginCode()
+		case "logout":
+			logout()
 		case "getfans":
-			fmt.Println("Getting fans...")
 			getSensors()
 		case "setpower":
 			fmt.Println("Setting power...")
