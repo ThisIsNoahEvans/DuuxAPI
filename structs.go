@@ -54,14 +54,17 @@ type SensorScheduleValue struct {
 }
 
 type SensorSchedule struct {
-	ID                    int                 `json:"id"`
-	SensorID              int                 `json:"SensorId"`
-	CreatedAt             time.Time           `json:"createdAt"`
-	Cron                  string              `json:"cron"`
-	Value                 SensorScheduleValue `json:"value"`
-	SensorScheduleGroupID int                 `json:"SensorScheduleGroupId"`
-	UpdatedAt             time.Time           `json:"updatedAt"`
-	Type                  string              `json:"type"`
+    ID int
+    Cron string
+    Type string
+    Value struct {
+        Power *int
+        Mode  *int
+        Speed *int
+		PowerString *string
+		ModeString  *string
+		SpeedString *string
+    }
 }
 
 type Sensor struct {

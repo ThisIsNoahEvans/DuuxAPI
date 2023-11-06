@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
@@ -924,41 +925,94 @@ func getSchedule(fanID string) {
 	sensors := []Sensor{}
 	json.Unmarshal(body, &sensors)
 
-	for _, sensor := range sensors {
-		fmt.Printf("Sensor ID: %d\n", sensor.SensorID)
-		fmt.Printf("Created At: %s\n", sensor.CreatedAt)
-		fmt.Printf("Updated At: %s\n", sensor.UpdatedAt)
-		fmt.Println("Schedules:")
-		for _, schedule := range sensor.SensorSchedules {
-			fmt.Printf("\tSchedule ID: %d\n", schedule.ID)
+	// Sort the sensors by ID
+	sort.Slice(sensors, func(i, j int) bool {
+		return sensors[i].SensorID < sensors[j].SensorID
+	})
 
-			exprDesc, err := cron.NewDescriptor(
-				cron.Use24HourTimeFormat(true),
-				cron.DayOfWeekStartsAtOne(false),
-				cron.Verbose(false),
-				cron.SetLocales(cron.Locale_en),
-			)
-			if err != nil {
-				fmt.Printf("failed to create CRON expression descriptor: %s", err)
+	// Create a map to store the schedules for each sensor ID
+	sensorSchedulesMap := make(map[int][]SensorSchedule)
+
+	// Iterate over the sensor schedules and merge them by sensor ID
+	for _, sensor := range sensors {
+		for _, schedule := range sensor.SensorSchedules {
+			sensorSchedules, ok := sensorSchedulesMap[sensor.SensorID]
+			if !ok {
+				sensorSchedules = []SensorSchedule{}
 			}
-		
+
+			sensorSchedules = append(sensorSchedules, schedule)
+			sensorSchedulesMap[sensor.SensorID] = sensorSchedules
+		}
+	}
+
+	// Iterate over the sensor schedules map and print the schedules for each sensor ID
+	for sensorID, sensorSchedules := range sensorSchedulesMap {
+		fmt.Printf("Sensor ID: %d\n\n", sensorID)
+
+		// Get the CRON expression descriptor
+		exprDesc, err := cron.NewDescriptor(
+			cron.Use24HourTimeFormat(true),
+			cron.DayOfWeekStartsAtOne(false),
+			cron.Verbose(false),
+			cron.SetLocales(cron.Locale_en),
+		)
+		if err != nil {
+			fmt.Printf("failed to create CRON expression descriptor: %s", err)
+			continue
+		}
+
+		// Print the schedules
+		fmt.Printf("Schedule(s): %d\n", len(sensorSchedules))
+		for _, schedule := range sensorSchedules {
+			// replace ints with strings
+			// power - 0 = off, 1 = on
+			// mode - 0 = normal, 1 = natural, 2 = night
+			if schedule.Value.Power != nil {
+				if *schedule.Value.Power == 0 {
+					schedule.Value.PowerString = new(string)
+					*schedule.Value.PowerString = "Off"
+				} else if *schedule.Value.Power == 1 {
+					schedule.Value.PowerString = new(string)
+					*schedule.Value.PowerString = "On"
+				}
+			}
+			if schedule.Value.Mode != nil {
+				if *schedule.Value.Mode == 0 {
+					schedule.Value.ModeString = new(string)
+					*schedule.Value.ModeString = "Normal"
+				} else if *schedule.Value.Mode == 1 {
+					schedule.Value.ModeString = new(string)
+					*schedule.Value.ModeString = "Natural"
+				} else if *schedule.Value.Mode == 2 {
+					schedule.Value.ModeString = new(string)
+					*schedule.Value.ModeString = "Night"
+				}
+			}
+
+			fmt.Printf("\nSchedule %d:\n", schedule.ID)
+
+			// Convert the CRON expression to a human-readable description
 			desc, err := exprDesc.ToDescription(schedule.Cron, cron.Locale_en)
 			if err != nil {
 				fmt.Printf("failed to convert CRON expression to human readable description: %s", err)
+				continue
 			}
 
-			fmt.Printf("\tCron: %s\n", desc)
-			fmt.Printf("\tPower: %d\n", schedule.Value.Power)
-			// Check if Mode and Speed are not nil before printing
+			// Print the schedule description
+			fmt.Printf("- %s\n", desc)
+
+			// Print the schedule value
+			fmt.Printf("- Power: %s\n", *schedule.Value.PowerString)
 			if schedule.Value.Mode != nil {
-				fmt.Printf("\tMode: %d\n", *schedule.Value.Mode)
+				fmt.Printf("- Mode: %s\n", *schedule.Value.ModeString)
 			}
 			if schedule.Value.Speed != nil {
-				fmt.Printf("\tSpeed: %d\n", *schedule.Value.Speed)
+				fmt.Printf("- Speed: %d\n", *schedule.Value.Speed)
 			}
-			fmt.Printf("\tType: %s\n\n", schedule.Type)
 		}
-		fmt.Println("---------------------")
+
+		fmt.Println("\n---------------------")
 	}
 
 }
