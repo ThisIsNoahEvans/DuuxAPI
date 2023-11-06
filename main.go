@@ -349,6 +349,48 @@ func getSensors() []SensorResponse {
 	return sensorResponse
 
 }
-func main() {
 
+func printUsage() {
+	fmt.Println("\nUsage:")
+	fmt.Println("  login")
+	fmt.Println("  logout")
+	fmt.Println("  getfans")
+	fmt.Println("  setpower <fan> <on/off>")
+	fmt.Println("  setspeed <fan> <speed, 1-26>")
+	fmt.Println("  setmode <fan> <normal|natural|sleep>")
+	fmt.Println("  settimer <fan> <on/off> <hours> <minutes>")
+	fmt.Println("  setoscillation <fan> <vertical|horizontal> <on/off>")
+}
+
+
+func main() {
+	args := os.Args[1:]
+
+	if len(args) > 0 {
+		switch args[0] {
+		case "login":
+			fmt.Println("Logging in...")
+		case "getfans":
+			fmt.Println("Getting fans...")
+		case "setpower":
+			fmt.Println("Setting power...")
+		case "setspeed":
+			fmt.Println("Setting speed...")
+		case "setmode":
+			fmt.Println("Setting mode...")
+		case "settimer":
+			fmt.Println("Setting timer...")
+		case "setoscillation":
+			fmt.Println("Setting oscillation...")
+		default:
+			fmt.Println("Unknown command: " + args[0])
+			printUsage()
+		}
+
+	} else {
+		fmt.Println("No command specified")
+		printUsage()
+		return
+	}
+	
 }
