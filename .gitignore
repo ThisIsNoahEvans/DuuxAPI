@@ -25,3 +25,7 @@ go.work
 
 # binary
 duux
+
+# tokens
+access_token.enc
+refresh_token.enc

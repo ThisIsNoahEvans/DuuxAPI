@@ -1,12 +1,86 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"errors"
 	"net/http"
 	"strings"
 )
+
+var encodedKey = "gM4NSmqvYb5ajCxsDwWz5W/+b+RM1LXs11e0zw4gwVY="
+var encryptionKey []byte
+
+func init() {
+	var err error
+	encryptionKey, err = base64.StdEncoding.DecodeString(encodedKey)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func saveAPIKey(apiKey string, name string) error {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return err
+	}
+
+	ciphertext := make([]byte, aes.BlockSize+len(apiKey))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(apiKey))
+
+	encodedStr := base64.StdEncoding.EncodeToString(ciphertext)
+
+	fileName := name + ".enc"
+	err = ioutil.WriteFile(fileName, []byte(encodedStr), 0644)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("API key saved")
+	return nil
+}
+
+func getAPIKey(name string) (string, error) {
+	fileName := name + ".enc"
+	encodedStr, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		// the file doesn't exist
+		return "", errors.New("API key file not found")
+	}
+
+	ciphertext, err := base64.StdEncoding.DecodeString(string(encodedStr))
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return "", err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return "", errors.New("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return string(ciphertext), nil
+}
 
 func sendLoginCode() {
 	fmt.Println("Logging in...")
@@ -118,19 +192,14 @@ func getAuthToken(loginCode string) {
 		fmt.Println(err)
 		return
 	}
-	
+
 	authTokenResponse := AuthTokenResponse{}
 	json.Unmarshal(body, &authTokenResponse)
 
 	if authTokenResponse.AccessToken != "" {
 		fmt.Println("Successfully got auth token!")
-		// convert expiresIn to string
-		expiresIn := string(rune(authTokenResponse.ExpiresIn))
-
-		fmt.Println("Access token: " + authTokenResponse.AccessToken)
-		fmt.Println("Refresh token: " + authTokenResponse.RefreshToken)
-		fmt.Println("Expires in: " + expiresIn)
-		fmt.Println("Token type: " + authTokenResponse.TokenType)
+		saveAPIKey(authTokenResponse.AccessToken, "access_token")
+		saveAPIKey(authTokenResponse.RefreshToken, "refresh_token")
 	} else {
 		fmt.Println("Failed!")
 		fmt.Println("Message: " + authTokenResponse.AccessToken)
