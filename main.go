@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 )
 
 var encodedKey = "gM4NSmqvYb5ajCxsDwWz5W/+b+RM1LXs11e0zw4gwVY="
@@ -344,10 +345,15 @@ func getSensors() []SensorResponse {
 	sensorResponse := []SensorResponse{}
 	json.Unmarshal(body, &sensorResponse)
 
-	fmt.Println("Successfully got sensors!")
-	
-	return sensorResponse
+		// print the sensors with tabwriter
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.Debug)
+	fmt.Fprintln(w, "\nID\tType\tDisplay Name")
+	for _, sensor := range sensorResponse {
+		fmt.Fprintf(w, "%d\t%s\t%s\n", sensor.ID, sensor.Type, sensor.DisplayName)
+	}
+	w.Flush()
 
+	return sensorResponse
 }
 
 func printUsage() {
@@ -370,8 +376,10 @@ func main() {
 		switch args[0] {
 		case "login":
 			fmt.Println("Logging in...")
+			sendLoginCode()
 		case "getfans":
 			fmt.Println("Getting fans...")
+			getSensors()
 		case "setpower":
 			fmt.Println("Setting power...")
 		case "setspeed":
