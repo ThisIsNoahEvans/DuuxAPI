@@ -860,11 +860,98 @@ func setOscillation(fanID string, direction string, state string) {
 	}
 }
 
+func getSchedule(fanID string) {
+	fmt.Println("Getting schedule...")
+
+	// get the tenant from the user data
+	userData := getUserDataFromFile()
+	// get the first tenant that isn't id '44' (this is duux default)
+	var tenantID int
+	for _, tenant := range userData.User.Tenants {
+		if tenant.ID != 44 {
+			tenantID = tenant.ID
+			break
+		}
+	}
+
+	// check if tenantID is still 0
+	if tenantID == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Tenant ID is 0")
+		return
+	}
+
+	url := "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors/" + fanID + "/scheduleGroups?includeScheduleItems=true"
+	method := "GET"
+
+	// get the API key
+	apiKey, err := getAPIKey("access_token")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// check if there is content in the body
+	if len(body) == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Body: " + string(body))
+		return
+	}
+
+	sensors := []Sensor{}
+	json.Unmarshal(body, &sensors)
+
+	for _, sensor := range sensors {
+		fmt.Printf("Sensor ID: %d\n", sensor.SensorID)
+		fmt.Printf("Created At: %s\n", sensor.CreatedAt)
+		fmt.Printf("Updated At: %s\n", sensor.UpdatedAt)
+		fmt.Println("Schedules:")
+		for _, schedule := range sensor.SensorSchedules {
+			fmt.Printf("\tSchedule ID: %d\n", schedule.ID)
+			fmt.Printf("\tCron: %s\n", schedule.Cron)
+			fmt.Printf("\tPower: %d\n", schedule.Value.Power)
+			// Check if Mode and Speed are not nil before printing
+			if schedule.Value.Mode != nil {
+				fmt.Printf("\tMode: %d\n", *schedule.Value.Mode)
+			}
+			if schedule.Value.Speed != nil {
+				fmt.Printf("\tSpeed: %d\n", *schedule.Value.Speed)
+			}
+			fmt.Printf("\tType: %s\n\n", schedule.Type)
+		}
+		fmt.Println("---------------------")
+	}
+
+}
+
 func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  login")
 	fmt.Println("  logout")
 	fmt.Println("  getfans")
+	fmt.Println("  getschedule <fan id>")
 	fmt.Println("  setpower <fan id> <on/off>")
 	fmt.Println("  setspeed <fan id> <speed, 1-26>")
 	fmt.Println("  setmode <fan id> <normal/natural/night>")
@@ -883,6 +970,8 @@ func main() {
 			logout()
 		case "getfans":
 			getSensors()
+		case "getschedule":
+			getSchedule(args[1])
 		case "setpower":
 			if len(args) < 3 {
 				fmt.Println("Not enough arguments")
