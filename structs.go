@@ -38,6 +38,31 @@ type SensorResponse struct {
 	DisplayName string `json:"displayName"`
 }
 
+// Individual sensor response
+type SensorResponseIndividual struct {
+    ID int `json:"id"`
+    Type string `json:"type"`
+    Name string `json:"name"`
+    DisplayName string `json:"displayName"`
+	Colour string `json:"color"`
+    LatestData struct {
+        FullData struct {
+            Mode *int `json:"mode"`
+			ModeString *string
+            Power *int `json:"power"`
+			PowerString *string
+            Speed int `json:"speed"`
+            Swing int `json:"swing"`
+			SwingString *string
+            Tilt int `json:"tilt"`
+			TiltString *string
+            Timer int `json:"timer"`
+			TimerString *string
+            Sensor string `json:"sensor"`
+        } `json:"fullData"`
+    } `json:"latestData"`
+}
+
 // General success response
 type SuccessResponse struct {
 	Response struct {
@@ -49,22 +74,22 @@ type SuccessResponse struct {
 type SensorScheduleValue struct {
 	Cron  string `json:"cron"`
 	Power int    `json:"power"`
-	Mode  *int   `json:"mode,omitempty"` 
+	Mode  *int   `json:"mode,omitempty"`
 	Speed *int   `json:"speed,omitempty"`
 }
 
 type SensorSchedule struct {
-    ID int
-    Cron string
-    Type string
-    Value struct {
-        Power *int
-        Mode  *int
-        Speed *int
+	ID    int
+	Cron  string
+	Type  string
+	Value struct {
+		Power       *int
+		Mode        *int
+		Speed       *int
 		PowerString *string
 		ModeString  *string
 		SpeedString *string
-    }
+	}
 }
 
 type Sensor struct {

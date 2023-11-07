@@ -333,7 +333,27 @@ func getUserDataFromFile() UserResponseSubset {
 
 // devices are called "sensors" in the API
 func getSensors() []SensorResponse {
-	url := "https://v4.api.cloudgarden.nl/tenants/31897/sensors"
+	fmt.Println("Getting sensors...\n")
+
+	// get the tenant from the user data
+	userData := getUserDataFromFile()
+	// get the first tenant that isn't id '44' (this is duux default)
+	var tenantID int
+	for _, tenant := range userData.User.Tenants {
+		if tenant.ID != 44 {
+			tenantID = tenant.ID
+			break
+		}
+	}
+
+	// check if tenantID is still 0
+	if tenantID == 0 {
+		fmt.Println("Failed!")
+		fmt.Println("Tenant ID is 0")
+		return nil
+	}
+
+	url := "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors"
 	method := "GET"
 
 	// get the API key
@@ -375,12 +395,116 @@ func getSensors() []SensorResponse {
 	sensorResponse := []SensorResponse{}
 	json.Unmarshal(body, &sensorResponse)
 
-	// print the sensors with tabwriter
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.Debug)
-	fmt.Fprintln(w, "\nID\tType\tDisplay Name")
+
+	// for each sensor, get the specific data
 	for _, sensor := range sensorResponse {
-		fmt.Fprintf(w, "%d\t%s\t%s\n", sensor.ID, sensor.Type, sensor.DisplayName)
+		url = "https://v4.api.cloudgarden.nl/tenants/" + fmt.Sprint(tenantID) + "/sensors/" + fmt.Sprint(sensor.ID)
+		method = "GET"
+
+		client := &http.Client{}
+		req, err := http.NewRequest(method, url, nil)
+
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		// no need to get again - we already have API key from prev request
+		req.Header.Add("Authorization", "Bearer "+apiKey)
+
+		res, err := client.Do(req)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		defer res.Body.Close()
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+
+		// check if there is content in the body
+		if len(body) == 0 {
+			fmt.Println("Failed!")
+			fmt.Println("Body: " + string(body))
+			return nil
+		}
+
+		// unmarshal the response
+		sensorResponseIndividual := SensorResponseIndividual{}
+		json.Unmarshal(body, &sensorResponseIndividual)
+
+		// replace ints with strings
+		// power - 0 = off, 1 = on
+		// mode - 0 = normal, 1 = natural, 2 = night
+		if sensorResponseIndividual.LatestData.FullData.Power != nil {
+			if *sensorResponseIndividual.LatestData.FullData.Power == 0 {
+				sensorResponseIndividual.LatestData.FullData.PowerString = new(string)
+				*sensorResponseIndividual.LatestData.FullData.PowerString = "Off"
+			} else if *sensorResponseIndividual.LatestData.FullData.Power == 1 {
+				sensorResponseIndividual.LatestData.FullData.PowerString = new(string)
+				*sensorResponseIndividual.LatestData.FullData.PowerString = "On"
+			}
+		} else {
+			sensorResponseIndividual.LatestData.FullData.PowerString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.PowerString = "Unknown"
+		}
+
+		if sensorResponseIndividual.LatestData.FullData.Mode != nil {
+			if *sensorResponseIndividual.LatestData.FullData.Mode == 0 {
+				sensorResponseIndividual.LatestData.FullData.ModeString = new(string)
+				*sensorResponseIndividual.LatestData.FullData.ModeString = "Normal"
+			} else if *sensorResponseIndividual.LatestData.FullData.Mode == 1 {
+				sensorResponseIndividual.LatestData.FullData.ModeString = new(string)
+				*sensorResponseIndividual.LatestData.FullData.ModeString = "Natural"
+
+			} else if *sensorResponseIndividual.LatestData.FullData.Mode == 2 {
+				sensorResponseIndividual.LatestData.FullData.ModeString = new(string)
+				*sensorResponseIndividual.LatestData.FullData.ModeString = "Night"
+			}
+		} else {
+			sensorResponseIndividual.LatestData.FullData.ModeString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.ModeString = "Unknown"
+		}
+
+		// swing - 0 = off, 1 = on
+		if sensorResponseIndividual.LatestData.FullData.Swing == 0 {
+			sensorResponseIndividual.LatestData.FullData.SwingString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.SwingString = "Off"
+		} else if sensorResponseIndividual.LatestData.FullData.Swing == 1 {
+			sensorResponseIndividual.LatestData.FullData.SwingString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.SwingString = "On"
+		} else {
+			sensorResponseIndividual.LatestData.FullData.SwingString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.SwingString = "Unknown"
+		}
+
+		// tilt - 0 = off, 1 = on
+		if sensorResponseIndividual.LatestData.FullData.Tilt == 0 {
+			sensorResponseIndividual.LatestData.FullData.TiltString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.TiltString = "Off"
+		} else if sensorResponseIndividual.LatestData.FullData.Tilt == 1 {
+			sensorResponseIndividual.LatestData.FullData.TiltString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.TiltString = "On"
+		} else {
+			sensorResponseIndividual.LatestData.FullData.TiltString = new(string)
+			*sensorResponseIndividual.LatestData.FullData.TiltString = "Unknown"
+		}
+
+		// capitalise the colour
+		sensorResponseIndividual.Colour = strings.Title(sensorResponseIndividual.Colour)
+
+		// add 'hours' to the timer text
+		sensorResponseIndividual.LatestData.FullData.TimerString = new(string)
+		*sensorResponseIndividual.LatestData.FullData.TimerString = fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Timer) + " hours"
+
+
+		fmt.Fprintln(w, "ID\tType\tName\tColour\tPower\tMode\tSpeed\tVertical\tHorizontal\tTimer\tMAC Address")
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%s\t%s\n", sensorResponseIndividual.ID, sensorResponseIndividual.Type, sensorResponseIndividual.Name, sensorResponseIndividual.Colour, *sensorResponseIndividual.LatestData.FullData.PowerString, *sensorResponseIndividual.LatestData.FullData.ModeString, sensorResponseIndividual.LatestData.FullData.Speed, sensorResponseIndividual.LatestData.FullData.Tilt, sensorResponseIndividual.LatestData.FullData.Swing, *sensorResponseIndividual.LatestData.FullData.TimerString, sensorResponseIndividual.LatestData.FullData.Sensor)
 	}
+
 	w.Flush()
 
 	return sensorResponse
