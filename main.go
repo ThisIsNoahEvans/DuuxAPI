@@ -1147,11 +1147,11 @@ func printUsage() {
 	fmt.Println("  logout")
 	fmt.Println("  getfans")
 	fmt.Println("  getschedule <fan id>")
-	fmt.Println("  setpower <fan id> <on/off>")
-	fmt.Println("  setspeed <fan id> <speed, 1-26>")
-	fmt.Println("  setmode <fan id> <normal/natural/night>")
-	fmt.Println("  settimer <fan id> <hours>")
-	fmt.Println("  setoscillation <fan id> <vertical/horizontal> <on/off>")
+	fmt.Println("  power <fan id> <on/off>")
+	fmt.Println("  speed <fan id> <speed, 1-26>")
+	fmt.Println("  mode <fan id> <normal/natural/night>")
+	fmt.Println("  timer <fan id> <hours>")
+	fmt.Println("  oscillation <fan id> <vertical/horizontal> <on/off>")
 }
 
 func main() {
@@ -1167,7 +1167,7 @@ func main() {
 			getSensors()
 		case "getschedule":
 			getSchedule(args[1])
-		case "setpower":
+		case "power":
 			if len(args) < 3 {
 				fmt.Println("Not enough arguments")
 				printUsage()
@@ -1176,7 +1176,7 @@ func main() {
 			fanID := args[1]
 			power := args[2]
 			setPower(fanID, power)
-		case "setspeed":
+		case "speed":
 			if len(args) < 3 {
 				fmt.Println("Not enough arguments")
 				printUsage()
@@ -1185,7 +1185,7 @@ func main() {
 			fanID := args[1]
 			speed := args[2]
 			setSpeed(fanID, speed)
-		case "setmode":
+		case "mode":
 			if len(args) < 3 {
 				fmt.Println("Not enough arguments")
 				printUsage()
@@ -1194,7 +1194,7 @@ func main() {
 			fanID := args[1]
 			mode := args[2]
 			setMode(fanID, mode)
-		case "settimer":
+		case "timer":
 			if len(args) < 3 {
 				fmt.Println("Not enough arguments")
 				printUsage()
@@ -1203,7 +1203,7 @@ func main() {
 			fanID := args[1]
 			hours := args[2]
 			setTimer(fanID, hours)
-		case "setoscillation":
+		case "oscillation":
 			if len(args) < 4 {
 				fmt.Println("Not enough arguments")
 				printUsage()
