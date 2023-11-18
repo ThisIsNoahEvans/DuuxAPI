@@ -439,6 +439,8 @@ func getSensors() []SensorResponse {
 		// replace ints with strings
 		// power - 0 = off, 1 = on
 		// mode - 0 = normal, 1 = natural, 2 = night
+		// swing - 0 = off, 1 = on
+		// tilt - 0 = off, 1 = on
 		if sensorResponseIndividual.LatestData.FullData.Power != nil {
 			if *sensorResponseIndividual.LatestData.FullData.Power == 0 {
 				sensorResponseIndividual.LatestData.FullData.PowerString = new(string)
@@ -500,9 +502,14 @@ func getSensors() []SensorResponse {
 		sensorResponseIndividual.LatestData.FullData.TimerString = new(string)
 		*sensorResponseIndividual.LatestData.FullData.TimerString = fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Timer) + " hours"
 
+		fmt.Println("Vertical: " + fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Tilt))
+		fmt.Println("Horizontal: " + fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Swing))
+		fmt.Println("Vertical string: " + *sensorResponseIndividual.LatestData.FullData.TiltString)
+		fmt.Println("Horizontal string: " + *sensorResponseIndividual.LatestData.FullData.SwingString)
+
 
 		fmt.Fprintln(w, "ID\tType\tName\tColour\tPower\tMode\tSpeed\tVertical\tHorizontal\tTimer\tMAC Address")
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%s\t%s\n", sensorResponseIndividual.ID, sensorResponseIndividual.Type, sensorResponseIndividual.Name, sensorResponseIndividual.Colour, *sensorResponseIndividual.LatestData.FullData.PowerString, *sensorResponseIndividual.LatestData.FullData.ModeString, sensorResponseIndividual.LatestData.FullData.Speed, sensorResponseIndividual.LatestData.FullData.Tilt, sensorResponseIndividual.LatestData.FullData.Swing, *sensorResponseIndividual.LatestData.FullData.TimerString, sensorResponseIndividual.LatestData.FullData.Sensor)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\n", sensorResponseIndividual.ID, sensorResponseIndividual.Type, sensorResponseIndividual.Name, sensorResponseIndividual.Colour, *sensorResponseIndividual.LatestData.FullData.PowerString, *sensorResponseIndividual.LatestData.FullData.ModeString, sensorResponseIndividual.LatestData.FullData.Speed, *sensorResponseIndividual.LatestData.FullData.TiltString, *sensorResponseIndividual.LatestData.FullData.SwingString, *sensorResponseIndividual.LatestData.FullData.TimerString, sensorResponseIndividual.LatestData.FullData.Sensor)
 	}
 
 	w.Flush()
