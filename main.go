@@ -502,12 +502,6 @@ func getSensors() []SensorResponse {
 		sensorResponseIndividual.LatestData.FullData.TimerString = new(string)
 		*sensorResponseIndividual.LatestData.FullData.TimerString = fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Timer) + " hours"
 
-		fmt.Println("Vertical: " + fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Tilt))
-		fmt.Println("Horizontal: " + fmt.Sprint(sensorResponseIndividual.LatestData.FullData.Swing))
-		fmt.Println("Vertical string: " + *sensorResponseIndividual.LatestData.FullData.TiltString)
-		fmt.Println("Horizontal string: " + *sensorResponseIndividual.LatestData.FullData.SwingString)
-
-
 		fmt.Fprintln(w, "ID\tType\tName\tColour\tPower\tMode\tSpeed\tVertical\tHorizontal\tTimer\tMAC Address")
 		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\n", sensorResponseIndividual.ID, sensorResponseIndividual.Type, sensorResponseIndividual.Name, sensorResponseIndividual.Colour, *sensorResponseIndividual.LatestData.FullData.PowerString, *sensorResponseIndividual.LatestData.FullData.ModeString, sensorResponseIndividual.LatestData.FullData.Speed, *sensorResponseIndividual.LatestData.FullData.TiltString, *sensorResponseIndividual.LatestData.FullData.SwingString, *sensorResponseIndividual.LatestData.FullData.TimerString, sensorResponseIndividual.LatestData.FullData.Sensor)
 	}
@@ -1148,11 +1142,94 @@ func getSchedule(fanID string) {
 
 }
 
+// Function to check if a slice contains a specific element
+func contains(slice []string, element string) bool {
+	for _, item := range slice {
+		if item == element {
+			return true
+		}
+	}
+	return false
+}
+
+// Set the default fan to use
+func setDefault() {
+	// print all fans
+	sensors := getSensors()
+	// get all IDs
+	var sensorIDs []string
+	for _, sensor := range sensors {
+		sensorIDs = append(sensorIDs, fmt.Sprint(sensor.ID))
+	}
+
+	// ask for fan ID
+	fmt.Println("\nEnter the ID of the fan you want to set as default: ")
+	var fanID string
+	fmt.Scanln(&fanID)
+
+	// check if fan ID is valid
+	fanIDInt := 0
+	fmt.Sscanf(fanID, "%d", &fanIDInt)
+	// check it's in the list of IDs
+	if !contains(sensorIDs, fanID) {
+		fmt.Println("Invalid fan ID: " + fanID)
+		return
+	}
+
+	// save the fan ID to a file
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-default-fan")
+	file, err := os.Create(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+
+	// write the fan ID to the file
+	_, err = file.WriteString(fanID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Successfully set default fan!")
+}
+
+// Get the default fan ID, if it exists
+func getDefault() string {
+	// Get the user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	// Specify the file path
+	filePath := filepath.Join(homeDir, ".duux-default-fan")
+
+	// read the file
+	fanID, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	return string(fanID)
+}
+
 func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  login")
 	fmt.Println("  logout")
 	fmt.Println("  getfans")
+	fmt.Println("  setdefault")
 	fmt.Println("  getschedule <fan id>")
 	fmt.Println("  power <fan id> <on/off>")
 	fmt.Println("  speed <fan id> <speed, 1-26>")
@@ -1172,53 +1249,102 @@ func main() {
 			logout()
 		case "getfans":
 			getSensors()
+		case "setdefault":
+			setDefault()
 		case "getschedule":
 			getSchedule(args[1])
 		case "power":
+			fanID := ""
+			power := ""
 			if len(args) < 3 {
-				fmt.Println("Not enough arguments")
-				printUsage()
-				return
+				// no fan ID specified
+				// get default fan ID
+				fanID = getDefault()
+				power = args[1]
+				if fanID == "" {
+					fmt.Println("No fan ID specified. Include fan ID as second argument, or set default fan with `duux setdefault`")
+					printUsage()
+					return
+				}
+			} else {
+				fanID = args[1]
+				power = args[2]
 			}
-			fanID := args[1]
-			power := args[2]
 			setPower(fanID, power)
 		case "speed":
+			fanID := ""
+			speed := ""
 			if len(args) < 3 {
-				fmt.Println("Not enough arguments")
-				printUsage()
-				return
+				// no fan ID specified
+				// get default fan ID
+				fanID = getDefault()
+				speed = args[1]
+				if fanID == "" {
+					fmt.Println("No fan ID specified. Include fan ID as second argument, or set default fan with `duux setdefault`")
+					printUsage()
+					return
+				}
+			} else {
+				fanID = args[1]
+				speed = args[2]
 			}
-			fanID := args[1]
-			speed := args[2]
 			setSpeed(fanID, speed)
 		case "mode":
+			fanID := ""
+			mode := ""
 			if len(args) < 3 {
-				fmt.Println("Not enough arguments")
-				printUsage()
-				return
+				// no fan ID specified
+				// get default fan ID
+				fanID = getDefault()
+				mode = args[1]
+				if fanID == "" {
+					fmt.Println("No fan ID specified. Include fan ID as second argument, or set default fan with `duux setdefault`")
+					printUsage()
+					return
+				}
+			} else {
+				fanID = args[1]
+				mode = args[2]
 			}
-			fanID := args[1]
-			mode := args[2]
 			setMode(fanID, mode)
 		case "timer":
+			fanID := ""
+			hours := ""
 			if len(args) < 3 {
-				fmt.Println("Not enough arguments")
-				printUsage()
-				return
+				// no fan ID specified
+				// get default fan ID
+				fanID = getDefault()
+				hours = args[1]
+				if fanID == "" {
+					fmt.Println("No fan ID specified. Include fan ID as second argument, or set default fan with `duux setdefault`")
+					printUsage()
+					return
+				}
+			} else {
+				fanID = args[1]
+				hours = args[2]
 			}
-			fanID := args[1]
-			hours := args[2]
 			setTimer(fanID, hours)
 		case "oscillation":
-			if len(args) < 4 {
-				fmt.Println("Not enough arguments")
-				printUsage()
-				return
+			fanID := ""
+			direction := ""
+			state := ""
+			if len(args) < 3 {
+				// no fan ID specified
+				// get default fan ID
+				fanID = getDefault()
+				direction = args[1]
+				state = args[2]
+				if fanID == "" {
+					fmt.Println("No fan ID specified. Include fan ID as second argument, or set default fan with `duux setdefault`")
+					printUsage()
+					return
+				}
+			} else {
+				fanID = args[1]
+				direction = args[2]
+				state = args[3]
 			}
-			fanID := args[1]
-			direction := args[2]
-			state := args[3]
 			setOscillation(fanID, direction, state)
 		default:
 			fmt.Println("Unknown command: " + args[0])
