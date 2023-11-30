@@ -88,6 +88,32 @@ ID      |Type  |Name           |Colour  |Power  |Mode     |Speed  |Vertical  |Ho
 12345  |20    |DUUX.1.108725  |Black   |On     |Natural  |10     |1         |1           |6 hours  |[DEVICE_MAC]
 ```
 
+### `setdefault`
+**Set a default fan, to be assumed for all future commands.**
+
+This will list all the fans on your account (similar to `getfans`), and ask for an ID to be used as the default fan.
+
+For all future commands, you will not have to specify a fan ID. For example, `power on` will suffice.
+
+#### Usage
+`setdefault`
+
+#### Arguments
+None.
+
+#### Example
+```
+$ ./duux setdefault
+Getting sensors...
+
+ID      |Type  |Name           |Colour  |Power  |Mode     |Speed  |Vertical  |Horizontal  |Timer    |MAC Address
+12345  |20    |DUUX.1.108725  |Black   |On     |Natural  |10     |1         |1           |6 hours  |[DEVICE_MAC]
+
+Enter the ID of the fan you want to set as default: 
+12345
+Successfully set default fan!
+```
+
 ### `getschedule`
 **Get all the schedules set for your device.**
 
@@ -95,7 +121,7 @@ ID      |Type  |Name           |Colour  |Power  |Mode     |Speed  |Vertical  |Ho
 `getschedule <fan id>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._
 
 #### Example
 ```
@@ -131,7 +157,7 @@ Schedule 239729:
 `power <fan id> <on/off>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._
 - **Power Action**: the power action to perform, `on` or `off`
 
 #### Example
@@ -149,7 +175,7 @@ Successfully set power!
 `speed <fan id> <speed, 1-26>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._`
 - **Speed**: the speed to set the fan to, between 1 and 26
 
 #### Example
@@ -167,7 +193,7 @@ Successfully set speed!
 `mode <fan id> <normal/natural/night>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._
 - **Air Mode**: the mode to set, either `normal`, `natural`, or `night`
 
 #### Example
@@ -187,7 +213,7 @@ If your fan is not currently powered on, it will be before the timer is started.
 `timer <fan id> <hours>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._
 - **Hours**: how many hours, from now, for the fan to remain on for
 
 #### Example
@@ -207,7 +233,7 @@ Successfully set timer!
 `oscillation <fan id> <vertical/horizontal> <on/off>`
 
 #### Arguments
-- **Fan ID**: the ID of the fan to control, obtained from `getfans`
+- **Fan ID**: the ID of the fan to control, obtained from `getfans`. _Not required if you have used `setdefault`._
 - **Direction**: which direction change, either `vertical` or `horizontal`
 - **Action**: what to do with this mode, `on` or `off`
 

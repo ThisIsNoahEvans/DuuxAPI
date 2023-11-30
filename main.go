@@ -19,6 +19,8 @@ import (
 	"text/tabwriter"
 )
 
+// this key is basically useless, as it's hardcoded into the open source code...
+// but some encryption is better than none
 var encodedKey = "gM4NSmqvYb5ajCxsDwWz5W/+b+RM1LXs11e0zw4gwVY="
 var encryptionKey []byte
 
